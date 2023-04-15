@@ -1,0 +1,142 @@
+#!/bin/bash
+
+PathCur=`dirname $0`
+PathVU="/opt"
+APTSName=`hostname`
+Date=`date +"%d-%m-%y"`
+
+#=================
+# Funck: Make BackUp VU Project
+#=================
+MakeBackUpVU(){
+	echo "Do you need to make BackUp VU Project? Yes/No"
+	read isBackUp
+	if [ $isBackUp == "Yes" ];then
+	  mkdir "$PathCur/BackUp_$APTSName($Date)"
+	  sudo cp -a $PathVU/Project $PathCur/BackUp_*
+	  if [ $? == 0 ]; then echo "The BackUp is here $PathCur"
+	  fi
+	else
+	  echo "You need to make BackUp VU manually!"
+  	fi
+  }
+#=================
+# Funck: Print Alpha.Soft
+#=================
+PrintSoft() {
+	localSoftNames=("$@")
+	SoftCnt=${#localSoftNames[@]}
+	echo "=================The list Alpha.Soft================="
+	for SoftName in ${localSoftNames[*]}; do
+	  echo "Name = $SoftName"	    
+	done
+	echo "The count of packages = $SoftCnt"
+}
+
+#=================
+# Funck: Delete old Alpha.Soft
+#=================
+DeleteSoft(){
+	localSoftNames=("$@")
+	echo "Do you need to remove this Alpha.Soft? Yes/No"
+	read isDelete
+	if [ "$isDelete" == "Yes" ]; then
+	  for SoftName in ${localSoftNames[*]}; do
+	    sudo dpkg -r $SoftName
+	    sleep 2
+	  done
+  	fi
+}
+
+#================	
+# Funck: Install New Alpha.Soft	
+#================
+InstallSoft(){
+	localSoftNames=("$@")
+	echo "Do you need to install this Alpha.Soft? Yes/No"
+	read isInstall
+	if [ "$isInstall" == "Yes" ]; then
+	  for SoftName in ${localSoftNames[*]}; do
+	    sudo dpkg -i $SoftName
+	    sleep 2
+	  done
+	fi
+}
+
+#================
+# Funck: Check and create dir usb
+#===============
+CheckCreateUSB(){
+	PathToUsb="/home/administrator/usb"
+	if [ ! -d "$PathToUsb" ]; then
+	  echo "The dir USB in $PathToUsb not found"
+	  echo "Do you want to create this dir? Yes/No"
+	  read isCreateDir
+	  if [ "$isCreateDir" == "Yes" ]; then
+	    sudo mkdir $PathToUsb
+	      if [ $? == 0 ]; then
+	        echo "The dir USB was create successfuly!"
+	      else
+	        echo "The dir wasn't create, you need to create it manually!"
+	      fi
+	  fi
+   	else
+	  echo "The dir $PathToUsb is exists"
+	fi
+}
+#================
+#Funck: Replace usb-rules
+#================
+ReplaceUsbRules(){
+	localUsbRules=$1
+	PathToReplace="/etc/udev/rules.d/"
+	if [ ! -z $localUsbRules ]; then 
+	  sudo cp -p $PathCur/$localUsbRules $PathToReplace
+	  if [ $? == 0 ]; then 
+	    echo "The Usb-Rules replaced in $PathToReplace"
+	  else 
+	    echo "The Usb-Rules replaced in $PathToReplace"
+	  fi	
+	else 
+	  echo "The Src Usb-rules isn't exists in $PathCur. You need to put it!"
+	fi
+}
+#==================================
+#MAIN                             +
+#==================================
+	
+	MakeBackUpVU	
+
+	# Get old soft
+	SoftNames=(`sudo dpkg -l |grep ii | awk {'print $2'} | grep alpha`)
+	PrintSoft ${SoftNames[*]}
+
+	DeleteSoft ${SoftNames[*]}
+	
+	# Get New soft for intstall  
+	SoftNames=(`ls $PathCur/AlphaSoft/*.deb`)
+	PrintSoft ${SoftNames[*]}
+
+	InstallSoft ${SoftNames[*]}
+
+	# Get New intslled soft
+	SoftNames=(`sudo dpkg -l |grep ii | awk {'print $2'} | grep alpha`)
+	PrintSoft ${SoftNames[*]}
+	
+	# Create dir usb if it isn't exists
+	CheckCreateUSB
+	
+	# Get usb-rules
+	UsbRules=(`ls $PathCur | grep rules`)
+	
+	# Replace usb-rules
+	ReplaceUsbRules $UsbRules
+
+	# Add this APTS to CheckList
+	echo "$APTSName is Update, Date: $Date" >> $PathCur/CheckList.txt
+	echo "This APTS: $APTSName was added to CkeckList.txt"
+
+	echo "============For manually============"
+	echo "You need to export aclual cfg to Alpha.Security"
+echo End
+
